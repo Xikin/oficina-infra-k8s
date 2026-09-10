@@ -1,0 +1,24 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# tfvars carrega valores específicos do ambiente e, eventualmente, segredos.
+# O .example é versionado; o real, não.
+*.tfvars
+!*.tfvars.example
+
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# O lock de providers É versionado de propósito: garante que CI e devs
+# resolvam exatamente as mesmas versões.
+!.terraform.lock.hcl
+
+.env
+.DS_Store
