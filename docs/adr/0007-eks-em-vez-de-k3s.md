@@ -5,7 +5,7 @@
 
 ## Contexto
 
-A [RFC-0001](../../../oficina-mvp/docs/rfc/0001-escolha-do-provedor-de-nuvem.md)
+A [RFC-0001](https://github.com/Xikin/tech_challenge/blob/main/docs/rfc/0001-escolha-do-provedor-de-nuvem.md)
 recomendava **não usar EKS** e sim k3s provisionado num único EC2 `t3.small`, para
 evitar o custo fixo de ~US$0,10/h do control plane gerenciado.
 

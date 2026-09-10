@@ -35,7 +35,7 @@ Aceitamos as restrições e as tornamos explícitas no código, em vez de contor
   erro obscuro do Terraform.
 - **Nenhum NAT Gateway** e nenhum VPC Endpoint de interface. São os dois maiores
   custos fixos de uma VPC e nenhum é necessário para este desenho
-  (ver [ADR-0006](../../../oficina-auth-lambda/docs/adr/0006-segredos-da-lambda.md)).
+  (ver [ADR-0006](https://github.com/Xikin/oficina-auth-lambda/blob/main/docs/adr/0006-segredos-da-lambda.md)).
 - **`terraform destroy` como operação rotineira**, documentada no README e exposta
   como `workflow_dispatch`, para preservar crédito entre sessões de estudo.
 

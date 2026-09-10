@@ -9,10 +9,10 @@ Parameter Store para que os demais repositórios os consumam sem acoplamento de 
 
 | Repositório | Papel |
 | --- | --- |
-| [oficina-auth-lambda](../oficina-auth-lambda) | Function serverless de autenticação por CPF + API Gateway |
+| [oficina-auth-lambda](https://github.com/Xikin/oficina-auth-lambda) | Function serverless de autenticação por CPF + API Gateway |
 | **oficina-infra-k8s** (este) | VPC + cluster EKS + metrics-server |
-| [oficina-infra-db](../oficina-infra-db) | RDS PostgreSQL gerenciado |
-| [oficina-mvp](../oficina-mvp) | Aplicação principal executando no cluster |
+| [oficina-infra-db](https://github.com/Xikin/oficina-infra-db) | RDS PostgreSQL gerenciado |
+| [oficina-mvp](https://github.com/Xikin/tech_challenge) | Aplicação principal executando no cluster |
 
 ---
 
@@ -198,7 +198,7 @@ Outros repositórios leem estes parâmetros com `data "aws_ssm_parameter"`:
 ## API
 
 Este repositório não expõe API própria. A API da oficina é documentada em
-[oficina-mvp](../oficina-mvp): Swagger em `/docs` e collection Postman versionada
+[oficina-mvp](https://github.com/Xikin/tech_challenge): Swagger em `/docs` e collection Postman versionada
 no repositório da aplicação.
 
 ## Documentação
