@@ -3,27 +3,24 @@
 #
 # O HPA da aplicação declara métricas de CPU e memória (autoscaling/v2). Sem o
 # metrics-server o HPA fica com targets "<unknown>" e NUNCA escala — era
-# exatamente essa a lacuna do cluster Kind da Fase 2. Não existe addon
-# gerenciado do EKS para ele, então instalamos via Helm.
+# exatamente essa a lacuna do cluster Kind da Fase 2.
+#
+# Instalado como addon gerenciado do EKS, e não via Helm. A diferença não é
+# só estética: com Helm, o Terraform precisa falar direto com o API server do
+# cluster, o que exige rota IPv4 até ele. Como addon, a instalação passa pela
+# API do EKS — mesma credencial e mesmo caminho de rede das demais chamadas
+# AWS — e a AWS cuida da compatibilidade de versão com o control plane.
 # ---------------------------------------------------------------------------
 
-resource "helm_release" "metrics_server" {
-  name       = "metrics-server"
-  repository = "https://kubernetes-sigs.github.io/metrics-server/"
-  chart      = "metrics-server"
-  version    = "3.12.2"
-  namespace  = "kube-system"
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "metrics-server"
 
-  # Espera os pods ficarem prontos para que um apply bem-sucedido signifique
-  # de fato "HPA operante".
-  wait    = true
-  timeout = 600
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
 
-  set {
-    name  = "args[0]"
-    value = "--kubelet-insecure-tls"
-  }
-
+  # Precisa de nós para agendar os pods, e de DNS e rede de pods funcionando
+  # para ficar ACTIVE.
   depends_on = [
     aws_eks_node_group.this,
     aws_eks_addon.coredns,

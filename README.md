@@ -65,9 +65,17 @@ de ambiente injetada no deploy.
 `ec2.amazonaws.com`. Numa conta AWS normal isso violaria o menor privilégio — a
 variável `lab_role_name` existe justamente para trocar por roles dedicadas.
 
-**metrics-server via Helm.** Sem ele o HPA fica com targets `<unknown>` e nunca
-escala — a lacuna exata do cluster Kind da Fase 2. Não existe addon gerenciado do
-EKS para o metrics-server.
+**metrics-server como addon gerenciado do EKS.** Sem ele o HPA fica com targets
+`<unknown>` e nunca escala — a lacuna exata do cluster Kind da Fase 2. A primeira
+versão usava Helm, o que obrigava o Terraform a falar direto com o API server do
+cluster; como addon, a instalação passa pela API do EKS, com a mesma credencial e o
+mesmo caminho de rede das demais chamadas AWS.
+
+**ECR para a imagem da API.** Na Fase 2 a imagem ia para o GHCR e o pull secret era
+criado com o `GITHUB_TOKEN`, que expira ao fim do job: pods agendados depois em nós
+novos — exatamente quando o HPA e o autoscaling de nós entram em ação — falhavam com
+`ImagePullBackOff`. No ECR da própria conta, os nós puxam com a role deles, sem
+segredo no cluster.
 
 **`max_size = 4` no node group.** O HPA cria pods; o autoscaling do node group cria
 as instâncias que os hospedam. Sem essa segunda camada, `maxReplicas: 10` seria
@@ -82,7 +90,8 @@ inatingível — foi o motivo de abandonarmos a proposta de k3s de nó único da
 | IaC | Terraform ~> 1.10 (backend S3 com lock nativo) |
 | Nuvem | AWS — EKS, VPC, EC2, SSM Parameter Store |
 | Kubernetes | EKS 1.31, addons `vpc-cni`, `kube-proxy`, `coredns` |
-| Autoscaling | EKS Managed Node Group + metrics-server (Helm) |
+| Autoscaling | EKS Managed Node Group + metrics-server (addon gerenciado) |
+| Registro de imagens | Amazon ECR (`oficina-<env>-api`, scan on push, retém 15 imagens) |
 | CI/CD | GitHub Actions — `plan` no PR, `apply` no merge |
 
 ---
@@ -91,7 +100,7 @@ inatingível — foi o motivo de abandonarmos a proposta de k3s de nó único da
 
 - Terraform >= 1.10
 - AWS CLI v2 autenticado
-- `kubectl` e `helm`
+- `kubectl`
 - Uma sessão ativa do AWS Academy Learner Lab
 
 ### Credenciais do Learner Lab
@@ -192,6 +201,8 @@ Outros repositórios leem estes parâmetros com `data "aws_ssm_parameter"`:
 | `/oficina/<env>/eks/node_security_group_id` | infra-db (ingress 5432) |
 | `/oficina/<env>/eks/cluster_name` | oficina-mvp (deploy) |
 | `/oficina/<env>/eks/cluster_endpoint` | — |
+| `/oficina/<env>/ecr/api_repository_url` | oficina-mvp (build e deploy) |
+| `/oficina/<env>/api/endpoint` | oficina-auth-lambda (backend do gateway); criado aqui com placeholder e sobrescrito pelo deploy da API |
 
 ---
 

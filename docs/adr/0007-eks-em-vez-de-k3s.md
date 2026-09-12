@@ -27,7 +27,7 @@ plane sai por ~US$2,40/dia e a stack pode ser destruída entre sessões de estud
 ## Decisão
 
 **Amazon EKS** com **Managed Node Group** (`min 2 / max 4`, `t3.small`), mais
-`metrics-server` instalado via Helm.
+`metrics-server` instalado como addon gerenciado do EKS.
 
 A escalabilidade passa a ter duas camadas complementares:
 
