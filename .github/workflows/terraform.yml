@@ -17,6 +17,11 @@ concurrency:
   group: terraform-k8s-${{ github.ref_name }}
   cancel-in-progress: false
 
+# Menor privilégio por padrão; o job declara o que precisa a mais
+# (pull-requests: write para comentar o plan).
+permissions:
+  contents: read
+
 env:
   AWS_REGION: us-east-1
   TF_VERSION: "1.10.5"
