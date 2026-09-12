@@ -186,6 +186,7 @@ então homologação e produção são clusters independentes.
 | `AWS_SECRET_ACCESS_KEY` | idem |
 | `AWS_SESSION_TOKEN` | idem — **expira a cada 4h** |
 | `TF_STATE_BUCKET` | saída de `./bootstrap/backend.sh` |
+| `NEW_RELIC_LICENSE_KEY` | opcional — instala a integração Kubernetes do New Relic depois do `apply` |
 
 ---
 

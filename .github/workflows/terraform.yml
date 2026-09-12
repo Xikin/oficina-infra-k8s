@@ -99,22 +99,55 @@ jobs:
         if: github.event_name == 'push'
         run: terraform apply -input=false -auto-approve tfplan
 
+      # Integração Kubernetes do New Relic: CPU, memória, pods, nós e eventos do
+      # cluster. Instalada pelo pipeline, e não pelo Terraform, porque é o runner
+      # do GitHub que alcança o API server do EKS. Não bloqueia a infraestrutura:
+      # sem NEW_RELIC_LICENSE_KEY, é ignorada; se falhar, vira aviso.
+      - name: Instalar integração Kubernetes do New Relic
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+        run: |
+          if [ -z "$NEW_RELIC_LICENSE_KEY" ]; then
+            echo "::notice::NEW_RELIC_LICENSE_KEY não configurado — integração Kubernetes ignorada."
+            exit 0
+          fi
+          CLUSTER=$(aws ssm get-parameter --name "/oficina/${TF_VAR_environment}/eks/cluster_name" --query Parameter.Value --output text)
+          aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER"
+          helm repo add newrelic https://helm-charts.newrelic.com
+          helm repo update newrelic
+          # lowDataMode reduz a ingestão para caber com folga nos 100 GB gratuitos.
+          helm upgrade --install newrelic-bundle newrelic/nri-bundle \
+            --namespace newrelic --create-namespace \
+            --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
+            --set global.cluster="$CLUSTER" \
+            --set global.lowDataMode=true \
+            --set newrelic-infrastructure.privileged=true \
+            --set kube-state-metrics.enabled=true \
+            --set nri-kube-events.enabled=true \
+            --set newrelic-logging.enabled=true \
+            --wait --timeout 10m
+          kubectl get pods -n newrelic
+
       - name: Terraform destroy
         if: github.event_name == 'workflow_dispatch' && inputs.destroy
         run: terraform destroy -input=false -auto-approve
 
       - name: Resumo do cluster
         if: github.event_name == 'push'
+        # terraform-bin: o wrapper do setup-terraform (necessário para comentar o plan
+        # no PR) acrescenta linhas extras à saída capturada por $(terraform output).
         run: |
           {
             echo "## Cluster EKS provisionado"
             echo ""
             echo "| Recurso | Valor |"
             echo "| --- | --- |"
-            echo "| Cluster | \`$(terraform output -raw cluster_name)\` |"
-            echo "| Versão | \`$(terraform output -raw cluster_version)\` |"
-            echo "| Endpoint | \`$(terraform output -raw cluster_endpoint)\` |"
-            echo "| VPC | \`$(terraform output -raw vpc_id)\` |"
+            echo "| Cluster | \`$(terraform-bin output -raw cluster_name)\` |"
+            echo "| Versão | \`$(terraform-bin output -raw cluster_version)\` |"
+            echo "| Endpoint | \`$(terraform-bin output -raw cluster_endpoint)\` |"
+            echo "| VPC | \`$(terraform-bin output -raw vpc_id)\` |"
             echo ""
             echo '```'
             terraform output -raw update_kubeconfig_command
