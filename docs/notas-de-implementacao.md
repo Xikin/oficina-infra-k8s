@@ -124,6 +124,9 @@ prática, só é preciso mexer para ter um cluster maior ou usar outra região.
   não pelo Terraform, porque é o runner do GitHub que alcança o API server do EKS. Não bloqueia a infraestrutura:
   sem `NEW_RELIC_LICENSE_KEY`, é ignorada; se falhar, vira aviso. `global.lowDataMode=true` reduz a ingestão para
   caber com folga nos 100 GB gratuitos.
+- `newrelic-logging.enabled=false`: os logs da API já chegam pelo agente New Relic de dentro da aplicação, com
+  `trace.id` e `span.id`. O coletor de logs do cluster enviaria cada linha uma segunda vez, e os painéis que contam
+  eventos (volume diário, funil de status) mostrariam o dobro.
 - O resumo do cluster usa `terraform-bin` em vez de `terraform`: o wrapper do `setup-terraform` (necessário para
   comentar o plan no PR) acrescenta linhas extras à saída capturada por `$(terraform output)`.
 - As actions são fixadas por SHA de commit, com a versão legível no comentário `# vX.Y.Z` ao lado de cada `uses:`.
