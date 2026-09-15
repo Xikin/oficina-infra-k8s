@@ -215,5 +215,6 @@ no repositório da aplicação.
 
 ## Documentação
 
+- [Notas de implementação](docs/notas-de-implementacao.md) — o porquê das escolhas do código e da configuração, por arquivo
 - [ADR-0005 — LabRole e as restrições do AWS Academy](docs/adr/0005-restricoes-aws-academy.md)
 - [ADR-0007 — EKS gerenciado em vez de k3s de nó único](docs/adr/0007-eks-em-vez-de-k3s.md)

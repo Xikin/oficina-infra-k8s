@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-# ---------------------------------------------------------------------------
-# Cria o bucket S3 que guarda o state remoto das três stacks Terraform.
-#
-# Rode UMA VEZ, antes do primeiro `terraform init` de qualquer repositório.
-# É idempotente: se o bucket já existe, não faz nada.
-#
-# O lock de state usa o mecanismo nativo do S3 (use_lockfile), então não é
-# preciso criar tabela DynamoDB.
-#
-#   ./bootstrap/backend.sh
-#   ./bootstrap/backend.sh us-east-1 meu-bucket-de-state
-# ---------------------------------------------------------------------------
 set -euo pipefail
 
 REGION="${1:-${AWS_REGION:-us-east-1}}"
@@ -30,7 +18,6 @@ echo "Bucket: ${BUCKET}"
 if aws s3api head-bucket --bucket "${BUCKET}" 2>/dev/null; then
   echo "Bucket já existe — nada a fazer."
 else
-  # us-east-1 é a única região que rejeita LocationConstraint.
   if [ "${REGION}" = "us-east-1" ]; then
     aws s3api create-bucket --bucket "${BUCKET}" --region "${REGION}"
   else
@@ -40,8 +27,6 @@ else
   echo "Bucket criado."
 fi
 
-# Versionamento permite recuperar um state corrompido por apply interrompido —
-# no Learner Lab a sessão cai a cada 4h, então isso não é hipotético.
 aws s3api put-bucket-versioning \
   --bucket "${BUCKET}" \
   --versioning-configuration Status=Enabled
