@@ -115,7 +115,7 @@ jobs:
             --set newrelic-infrastructure.privileged=true \
             --set kube-state-metrics.enabled=true \
             --set nri-kube-events.enabled=true \
-            --set newrelic-logging.enabled=true \
+            --set newrelic-logging.enabled=false \
             --wait --timeout 10m
           kubectl get pods -n newrelic
 
