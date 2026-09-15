@@ -13,19 +13,15 @@ on:
         default: false
 
 concurrency:
-  # Nunca dois applies simultâneos sobre o mesmo state.
   group: terraform-k8s-${{ github.ref_name }}
   cancel-in-progress: false
 
-# Menor privilégio por padrão; o job declara o que precisa a mais
-# (pull-requests: write para comentar o plan).
 permissions:
   contents: read
 
 env:
   AWS_REGION: us-east-1
   TF_VERSION: "1.10.5"
-  # main -> prod, homolog -> homolog
   TF_VAR_environment: ${{ github.ref_name == 'main' && 'prod' || 'homolog' }}
 
 jobs:
@@ -46,8 +42,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # O Learner Lab entrega credenciais temporárias; o token é obrigatório
-          # e expira junto com a sessão de 4h do lab.
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
@@ -99,10 +93,6 @@ jobs:
         if: github.event_name == 'push'
         run: terraform apply -input=false -auto-approve tfplan
 
-      # Integração Kubernetes do New Relic: CPU, memória, pods, nós e eventos do
-      # cluster. Instalada pelo pipeline, e não pelo Terraform, porque é o runner
-      # do GitHub que alcança o API server do EKS. Não bloqueia a infraestrutura:
-      # sem NEW_RELIC_LICENSE_KEY, é ignorada; se falhar, vira aviso.
       - name: Instalar integração Kubernetes do New Relic
         if: github.event_name == 'push'
         continue-on-error: true
@@ -117,7 +107,6 @@ jobs:
           aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER"
           helm repo add newrelic https://helm-charts.newrelic.com
           helm repo update newrelic
-          # lowDataMode reduz a ingestão para caber com folga nos 100 GB gratuitos.
           helm upgrade --install newrelic-bundle newrelic/nri-bundle \
             --namespace newrelic --create-namespace \
             --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
@@ -136,8 +125,6 @@ jobs:
 
       - name: Resumo do cluster
         if: github.event_name == 'push'
-        # terraform-bin: o wrapper do setup-terraform (necessário para comentar o plan
-        # no PR) acrescenta linhas extras à saída capturada por $(terraform output).
         run: |
           {
             echo "## Cluster EKS provisionado"

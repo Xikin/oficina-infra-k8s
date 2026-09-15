@@ -1,26 +1,18 @@
-# Copie para terraform.tfvars e ajuste. Todos os valores têm default sensato
-# para o AWS Academy Learner Lab — na prática você só precisa mexer aqui se
-# quiser um cluster maior ou uma região diferente.
-
 region      = "us-east-1"
 project     = "oficina"
-environment = "prod" # ou "homolog"
+environment = "prod"
 
 vpc_cidr = "10.0.0.0/16"
 azs      = ["us-east-1a", "us-east-1b"]
 
 kubernetes_version = "1.31"
 
-# O Learner Lab não permite criar IAM roles — LabRole já existe na conta.
 lab_role_name = "LabRole"
 
-# t3.small = 2 vCPU / 2 GiB. Dois nós comportam as 2 réplicas mínimas do HPA
-# com folga; o autoscaling sobe até node_max_size sob carga.
 node_instance_types = ["t3.small"]
-node_capacity_type  = "ON_DEMAND" # troque para "SPOT" para economizar ~70% nos nós
+node_capacity_type  = "ON_DEMAND"
 node_desired_size   = 2
 node_min_size       = 2
 node_max_size       = 4
 
-# Preencha apenas se o pipeline autenticar com um principal diferente do seu.
 extra_cluster_admin_arns = []
