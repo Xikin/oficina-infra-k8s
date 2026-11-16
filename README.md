@@ -1,14 +1,45 @@
 # oficina-infra-k8s
 
-Infraestrutura como código da **rede e do cluster Kubernetes** da Oficina Mecânica.
-Repositório 2 de 4 do Tech Challenge — Fase 3.
+Infraestrutura como código da **rede, do cluster Kubernetes e da mensageria** da Oficina Mecânica.
+Tech Challenge — Fase 4.
 
-Esta stack é a base de todas as outras: cria a VPC que o banco e a Lambda usam, o
-cluster EKS onde a API roda, e publica os identificadores desses recursos no SSM
-Parameter Store para que os demais repositórios os consumam sem acoplamento de state.
+Esta stack é a base de todas as outras. Ela cria:
+
+- a VPC;
+- o cluster EKS onde rodam os três microsserviços;
+- os repositórios ECR de cada serviço;
+- o **RabbitMQ** que transporta a saga.
+
+Os identificadores ficam publicados no SSM Parameter Store, para que os outros repositórios os consumam sem acoplamento de state.
 
 | Repositório | Papel |
 | --- | --- |
+| [oficina-mvp](https://github.com/Xikin/tech_challenge) | OS Service — clientes, veículos, OS, orquestração da saga |
+| [oficina-execucao](https://github.com/Xikin/oficina-execucao) | Execução e Produção |
+| [oficina-billing](https://github.com/Xikin/oficina-billing) | Orçamento e Pagamento |
+| [oficina-auth-lambda](https://github.com/Xikin/oficina-auth-lambda) | Autenticação por CPF + API Gateway |
+| **oficina-infra-k8s** (este) | VPC, EKS, ECR, RabbitMQ |
+| [oficina-infra-db](https://github.com/Xikin/oficina-infra-db) | RDS do OS Service e do Execução |
+
+## Fase 4
+
+| Mudança | Por quê |
+| --- | --- |
+| ECR `oficina-<env>-execucao` e `oficina-<env>-billing` (`ecr.tf`) | Cada microsserviço publica a própria imagem; o OS Service continua no repositório `api` da Fase 3 |
+| RabbitMQ 4.1 no namespace `plataforma` (`plataforma/rabbitmq.yaml`, `mensageria.tf`) | Mensageria da saga; senha e URL geradas pelo Terraform no SSM e lidas pelos pipelines dos serviços |
+| Add-on `aws-ebs-csi-driver` | Volume persistente para o RabbitMQ e o MongoDB do Billing; sem ele o `PersistentVolumeClaim` fica pendente |
+| `enableNetworkPolicy` no VPC CNI | Faz valer as `NetworkPolicy` que restringem quem fala com RabbitMQ, Redis e MongoDB |
+| Nós `t3.medium` em vez de `t3.small` | Os três serviços, Redis, MongoDB, RabbitMQ e os agentes passam de 25 pods; o `t3.small` comporta 11 por nó |
+| Parâmetros `/oficina/<env>/{os,execucao,billing}/endpoint` | Nascem com valor provisório e são preenchidos pelo deploy de cada serviço; o API Gateway roteia por eles |
+
+A troca do tipo de instância recria o node group no primeiro apply (os pods são reagendados). Para acessar o painel do RabbitMQ:
+
+```bash
+kubectl port-forward -n plataforma svc/rabbitmq 15672
+aws ssm get-parameter --name /oficina/prod/mensageria/rabbitmq_password --with-decryption --query Parameter.Value --output text
+```
+
+--- | --- |
 | [oficina-auth-lambda](https://github.com/Xikin/oficina-auth-lambda) | Function serverless de autenticação por CPF + API Gateway |
 | **oficina-infra-k8s** (este) | VPC + cluster EKS + metrics-server |
 | [oficina-infra-db](https://github.com/Xikin/oficina-infra-db) | RDS PostgreSQL gerenciado |
@@ -203,7 +234,11 @@ Outros repositórios leem estes parâmetros com `data "aws_ssm_parameter"`:
 | `/oficina/<env>/eks/cluster_name` | oficina-mvp (deploy) |
 | `/oficina/<env>/eks/cluster_endpoint` | — |
 | `/oficina/<env>/ecr/api_repository_url` | oficina-mvp (build e deploy) |
-| `/oficina/<env>/api/endpoint` | oficina-auth-lambda (backend do gateway); criado aqui com placeholder e sobrescrito pelo deploy da API |
+| `/oficina/<env>/ecr/execucao_repository_url`, `/ecr/billing_repository_url` | oficina-execucao, oficina-billing |
+| `/oficina/<env>/mensageria/rabbitmq_url` | os três microsserviços (SecureString) |
+| `/oficina/<env>/mensageria/rabbitmq_password`, `/rabbitmq_erlang_cookie` | este pipeline, para criar o Secret do broker |
+| `/oficina/<env>/{os,execucao,billing}/endpoint` | oficina-auth-lambda (rotas do gateway); placeholder sobrescrito pelo deploy de cada serviço |
+| `/oficina/<env>/api/endpoint` | legado da Fase 3; o OS Service ainda o atualiza |
 
 ---
 
