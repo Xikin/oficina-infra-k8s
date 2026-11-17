@@ -48,3 +48,15 @@ resource "aws_ssm_parameter" "api_endpoint" {
     ignore_changes = [value]
   }
 }
+
+resource "aws_ssm_parameter" "endpoint_servico" {
+  for_each    = toset(concat(["os"], var.servicos_adicionais))
+  name        = "${local.ssm_prefix}/${each.key}/endpoint"
+  description = "Hostname do Load Balancer do serviço ${each.key}; preenchido pelo pipeline do serviço e lido pelo API Gateway"
+  type        = "String"
+  value       = "pendente-primeiro-deploy.invalid"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
