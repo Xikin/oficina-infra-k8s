@@ -58,7 +58,7 @@ variable "lab_role_name" {
 variable "node_instance_types" {
   description = "Tipos de instância do managed node group (o Learner Lab limita a família t3 até t3.medium)"
   type        = list(string)
-  default     = ["t3.small"]
+  default     = ["t3.medium"]
 }
 
 variable "node_capacity_type" {
@@ -93,4 +93,16 @@ variable "extra_cluster_admin_arns" {
   EOT
   type        = list(string)
   default     = []
+}
+
+variable "servicos_adicionais" {
+  description = "Microsserviços da Fase 4 que ganham repositório ECR próprio (o OS Service usa o repositório 'api', herdado da Fase 3)"
+  type        = list(string)
+  default     = ["execucao", "billing"]
+}
+
+variable "rabbitmq_usuario" {
+  description = "Usuário da aplicação no RabbitMQ"
+  type        = string
+  default     = "oficina"
 }

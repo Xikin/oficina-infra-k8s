@@ -131,3 +131,29 @@ prática, só é preciso mexer para ter um cluster maior ou usar outra região.
   comentar o plan no PR) acrescenta linhas extras à saída capturada por `$(terraform output)`.
 - As actions são fixadas por SHA de commit, com a versão legível no comentário `# vX.Y.Z` ao lado de cada `uses:`.
   O `.github/dependabot.yml` mantém os SHAs atualizados; sem ele, o pin congelaria as actions para sempre.
+
+---
+
+## Fase 4
+
+### `mensageria.tf` e `plataforma/rabbitmq.yaml`
+
+- O RabbitMQ roda no cluster, e não no Amazon MQ: o Learner Lab não garante o Amazon MQ, e um broker no cluster é igual ao do `docker compose` local, o que facilita reproduzir problemas.
+- Uma réplica com volume EBS: as filas são duráveis e as mensagens persistentes, então um restart do pod não perde mensagens. A ausência de cluster de três nós é aceita para o ambiente de avaliação; o outbox dos serviços segura as mensagens enquanto o broker está fora.
+- `RABBITMQ_NODENAME=rabbit@localhost` deixa o nome do nó estável entre recriações do pod. O diretório de dados do RabbitMQ leva o nome do nó; com o hostname do pod, um nome novo ignoraria as filas gravadas no volume.
+- Senha e *erlang cookie* gerados por `random_password` sem caracteres especiais, porque a senha vai dentro de uma URL AMQP. A URL completa vai para o SSM como `SecureString`; os pipelines dos serviços a copiam para o Secret de cada um.
+- O Secret do broker (`rabbitmq`) é criado pelo pipeline com `kubectl create --dry-run | apply`, e não pelo Terraform: este repositório não usa o provider `kubernetes`, e manter o mesmo padrão do `nri-bundle` evita um segundo mecanismo de autenticação no cluster.
+- `NetworkPolicy`: AMQP só a partir do namespace `oficina`; a porta de métricas (15692) só a partir do namespace `newrelic`. O painel (15672) fica de fora: `kubectl port-forward` não passa pela política.
+
+### `addons.tf` — `aws-ebs-csi-driver`
+
+Sem IRSA: o add-on usa o perfil dos nós (a `LabRole`), que no Learner Lab já tem permissão de EC2. Numa conta comum, o correto é uma role própria para a *service account* do driver.
+
+### `eks.tf` — `enableNetworkPolicy`
+
+O VPC CNI só aplica `NetworkPolicy` com o agente de políticas ligado. Sem isso, as políticas do Redis, do MongoDB e do RabbitMQ seriam aceitas pelo Kubernetes e ignoradas na prática.
+
+### `ecr.tf` — repositórios dos serviços
+
+O OS Service continua usando o repositório `oficina-<env>-api` da Fase 3. Renomear para `-os` recriaria o repositório e apagaria as imagens, sem ganho.
+

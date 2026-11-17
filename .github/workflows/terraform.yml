@@ -93,6 +93,26 @@ jobs:
         if: github.event_name == 'push'
         run: terraform apply -input=false -auto-approve tfplan
 
+      - name: Validar manifests da plataforma
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz kubeconform
+          ./kubeconform -summary -strict -kubernetes-version 1.31.0 plataforma/
+
+      - name: Instalar RabbitMQ (mensageria da saga)
+        if: github.event_name == 'push'
+        run: |
+          ler() { aws ssm get-parameter --name "/oficina/${TF_VAR_environment}/mensageria/$1" --with-decryption --query Parameter.Value --output text; }
+          CLUSTER=$(aws ssm get-parameter --name "/oficina/${TF_VAR_environment}/eks/cluster_name" --query Parameter.Value --output text)
+          aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER"
+          kubectl apply -f plataforma/rabbitmq.yaml
+          kubectl create secret generic rabbitmq --namespace=plataforma \
+            --from-literal=usuario=oficina \
+            --from-literal=senha="$(ler rabbitmq_password)" \
+            --from-literal=cookie="$(ler rabbitmq_erlang_cookie)" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl rollout status statefulset/rabbitmq -n plataforma --timeout=600s
+          kubectl get pods,svc,pvc -n plataforma
+
       - name: Instalar integração Kubernetes do New Relic
         if: github.event_name == 'push'
         continue-on-error: true
